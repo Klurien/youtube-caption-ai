@@ -6,7 +6,7 @@ import { YouTubeTranscriptApi } from 'youtube-transcript-api-js'
 import axios from 'axios'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
 const SCRAPINGBEE_API_URL = 'https://api.scrapingbee.com/v1/'
 
