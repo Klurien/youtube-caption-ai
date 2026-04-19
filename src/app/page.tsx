@@ -46,7 +46,7 @@ export default function Home() {
         >
           <h1>NovaCap AI</h1>
           <p className="subtitle">
-            Scale your learning. Summarize any YouTube video in seconds with Gemini 2.0 Flash.
+            Scale your learning. Summarize any YouTube video in seconds with Gemini Flash.
           </p>
         </motion.div>
       </header>
@@ -133,7 +133,7 @@ export default function Home() {
       </AnimatePresence>
 
       <footer style={{ marginTop: 'auto', padding: '4rem 0 2rem', textAlign: 'center', color: 'var(--muted)' }}>
-        <p>© 2026 NovaCap AI. Powered by Gemini 2.0 Flash.</p>
+        <p>© 2026 NovaCap AI. Powered by Gemini Flash.</p>
       </footer>
 
       <style jsx>{`
