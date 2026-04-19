@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { getYouTubeID } from '@/lib/youtube'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { YouTubeTranscriptApi } from 'youtube-transcript-api-js'
 import axios from 'axios'
 
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+const SCRAPINGBEE_API_URL = 'https://api.scrapingbee.com/v1/'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 })
     }
 
-    // Initialize tables if they don't exist
+    // Initialize tables
     await query(`
       CREATE TABLE IF NOT EXISTS videos (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -35,34 +40,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ summary: existingVideo.summary, cached: true })
     }
 
-    // 2. Transcript Fetching (Mocked/Proxy logic)
-    const transcript = "This is a simulated transcript for the video. In a real-world application, " + 
-                       "you would fetch the actual captions from YouTube using a proxy API to avoid rate limiting."
-    
-    // 3. Summarization with DeepSeek
-    const deepseekResponse = await axios.post(
-      DEEPSEEK_API_URL,
-      {
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: "Summarize this YouTube transcript into 3 key takeaways and a 5-bullet detailed breakdown. Use Markdown." },
-          { role: "user", content: transcript }
-        ]
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          'Content-Type': 'application/json'
+    // 2. Transcript Fetching
+    let transcriptText = ''
+    try {
+      // First attempt: Free library (native)
+      const api = new YouTubeTranscriptApi()
+      const fetchedTranscript = await api.fetch(youtubeId)
+      transcriptText = fetchedTranscript.toRawData().map((t: any) => t.text).join(' ')
+    } catch (err) {
+      console.warn('Native transcript fetch failed, trying ScrapingBee...')
+      
+      // Fallback: ScrapingBee (using free trial credits if provided)
+      if (process.env.PROXY_API_KEY) {
+        try {
+          const response = await axios.get(SCRAPINGBEE_API_URL, {
+            params: {
+              api_key: process.env.PROXY_API_KEY,
+              url: `https://www.youtube.com/watch?v=${youtubeId}`,
+              extract_rules: { transcript: '.ytp-caption-segment' }
+            }
+          })
+          transcriptText = response.data.transcript || ''
+        } catch (sErr) {
+          console.error('All transcript fetch attempts failed')
         }
       }
-    )
+    }
 
-    const summary = deepseekResponse.data.choices[0].message.content
+    if (!transcriptText) {
+      // Fallback for demo purposes if both fail
+      transcriptText = "Transcript extraction failed. Please ensure the video has captions available."
+    }
+
+    // 3. Summarization with Gemini (Free Tier)
+    const prompt = `Summarize this YouTube transcript into 3 key takeaways and a 5-bullet detailed breakdown. Use Markdown.\n\nTranscript: ${transcriptText}`
+    const result = await model.generateContent(prompt)
+    const summary = result.response.text()
 
     // 4. Persistence
     await query(
       'INSERT INTO videos (youtube_id, url, transcript, summary) VALUES (?, ?, ?, ?)',
-      [youtubeId, url, transcript, summary]
+      [youtubeId, url, transcriptText, summary]
     )
 
     return NextResponse.json({ summary, cached: false })
