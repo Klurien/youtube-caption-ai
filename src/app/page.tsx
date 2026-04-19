@@ -23,7 +23,7 @@ export default function Home() {
     try {
       // Simulate step updates for better UX
       setTimeout(() => setLoadingStep('Analyzing video content...'), 1500)
-      setTimeout(() => setLoadingStep('DeepSeek is thinking...'), 3500)
+      setTimeout(() => setLoadingStep('Gemini is thinking...'), 3500)
 
       const response = await axios.post('/api/summarize', { url })
       setSummary(response.data.summary)
@@ -46,7 +46,7 @@ export default function Home() {
         >
           <h1>NovaCap AI</h1>
           <p className="subtitle">
-            Scale your learning. Summarize any YouTube video in seconds with DeepSeek-V3.
+            Scale your learning. Summarize any YouTube video in seconds with Gemini 1.5 Flash.
           </p>
         </motion.div>
       </header>
@@ -133,7 +133,7 @@ export default function Home() {
       </AnimatePresence>
 
       <footer style={{ marginTop: 'auto', padding: '4rem 0 2rem', textAlign: 'center', color: 'var(--muted)' }}>
-        <p>© 2026 NovaCap AI. Powered by DeepSeek-V3.</p>
+        <p>© 2026 NovaCap AI. Powered by Gemini 1.5 Flash.</p>
       </footer>
 
       <style jsx>{`
