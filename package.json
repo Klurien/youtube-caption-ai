@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
     "@google/generative-ai": "^0.24.1",
     "axios": "^1.15.0",
     "axios-retry": "^4.5.0",
+    "dotenv": "^17.4.2",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "mysql2": "^3.22.1",
@@ -19,7 +21,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
-    "youtube-transcript-api-js": "^3.0.3"
+    "youtube-transcript-api-js": "^3.0.3",
+    "yt-dlp-exec": "^1.0.2"
   },
   "devDependencies": {
     "@types/node": "^20",

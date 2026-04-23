@@ -4,9 +4,10 @@ import { getYouTubeID } from '@/lib/youtube'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { YouTubeTranscriptApi } from 'youtube-transcript-api-js'
 import axios from 'axios'
+import { downloadAudioBuffer } from '@/lib/audio'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" })
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
 const SCRAPINGBEE_API_URL = 'https://api.scrapingbee.com/v1/'
 
@@ -67,15 +68,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!transcriptText) {
-      // Fallback for demo purposes if both fail
-      transcriptText = "Transcript extraction failed. Please ensure the video has captions available."
+    let summary = ''
+    if (transcriptText && !transcriptText.includes('failed')) {
+      // 3a. Summarization from Text
+      const prompt = `Summarize this YouTube transcript into 3 key takeaways and a 5-bullet detailed breakdown. Use Markdown.\n\nTranscript: ${transcriptText}`
+      const result = await model.generateContent(prompt)
+      summary = result.response.text()
+    } else {
+      // 3b. Fallback: Summarization from Audio (STT)
+      console.log('Transcript missing, falling back to Audio STT...')
+      try {
+        const audioBuffer = await downloadAudioBuffer(youtubeId)
+        const result = await model.generateContent([
+          {
+            inlineData: {
+              data: audioBuffer.toString('base64'),
+              mimeType: 'audio/mp4'
+            }
+          },
+          'Summarize this YouTube video audio into 3 key takeaways and a 5-bullet detailed breakdown. Use Markdown.'
+        ])
+        summary = result.response.text()
+        transcriptText = '[Audio STT Summary]' // Placeholder for DB
+      } catch (audioErr) {
+        console.error('Audio STT failed:', audioErr)
+        return NextResponse.json({ error: 'Failed to transcribe and summarize video audio.' }, { status: 500 })
+      }
     }
-
-    // 3. Summarization with Gemini (Free Tier)
-    const prompt = `Summarize this YouTube transcript into 3 key takeaways and a 5-bullet detailed breakdown. Use Markdown.\n\nTranscript: ${transcriptText}`
-    const result = await model.generateContent(prompt)
-    const summary = result.response.text()
 
     // 4. Persistence
     await query(
