@@ -90,9 +90,15 @@ export async function POST(req: NextRequest) {
         ])
         summary = result.response.text()
         transcriptText = '[Audio STT Summary]' // Placeholder for DB
-      } catch (audioErr) {
+      } catch (audioErr: any) {
         console.error('Audio STT failed:', audioErr)
-        return NextResponse.json({ error: 'Failed to transcribe and summarize video audio.' }, { status: 500 })
+        let errorMessage = 'Failed to transcribe and summarize video audio.'
+        if (audioErr.message?.includes('Video unavailable')) {
+          errorMessage = 'This video is unavailable or restricted.'
+        } else if (audioErr.message?.includes('503')) {
+          errorMessage = 'The AI service is currently overloaded. Please try again in a few moments.'
+        }
+        return NextResponse.json({ error: errorMessage }, { status: 500 })
       }
     }
 
@@ -106,6 +112,15 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Summarize error:', error)
+    
+    // Check for specific Gemini errors
+    if (error.message?.includes('503')) {
+      return NextResponse.json({ error: 'Gemini AI is temporarily unavailable (503). Please try again soon.' }, { status: 503 })
+    }
+    if (error.message?.includes('404')) {
+      return NextResponse.json({ error: 'AI model configuration error. Please contact support.' }, { status: 500 })
+    }
+
     return NextResponse.json({ error: error.message || 'Failed to summarize video' }, { status: 500 })
   }
 }
